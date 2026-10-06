@@ -1,0 +1,21 @@
+# model weights (distributed separately — see README)
+weights/
+*.pt
+
+# outputs (may contain patient-derived images / identifiers)
+gradcam_out/
+panadipo_out/
+/results/
+work/
+*.mp4
+*.avi
+*.dcm
+preds*.csv
+*.png
+!docs/figures/*.png
+
+# manuscript source figures (full resolution, kept locally)
+figs/
+
+__pycache__/
+*.pyc

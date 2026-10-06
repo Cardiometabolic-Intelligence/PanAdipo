@@ -1,0 +1,27 @@
+# PanAdipo — single environment for the full pipeline (DICOM -> AVI -> inference -> EAT -> Grad-CAM++).
+# Verified 2026-10-03: bit-exact (|Δ| < 1e-7) with the manuscript predictions on 4,000 clips.
+#   conda env create -f envs/panadipo.yml && conda activate panadipo
+# CPU-only: replace the cu118 index URL with https://download.pytorch.org/whl/cpu
+name: panadipo
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu118
+      - torch==2.1.0
+      - torchvision==0.16.0
+      - timm==0.9.10
+      - numpy==1.26.4
+      - opencv-python-headless==4.10.0.84
+      - pydicom==3.0.1          # >=3 converts YBR -> RGB (matches the original preprocessing)
+      - pylibjpeg==2.1.0
+      - pylibjpeg-libjpeg
+      - pandas
+      - scipy
+      - scikit-learn
+      - matplotlib
+      - pillow
+      - tqdm
+      - grad-cam==1.5.5
