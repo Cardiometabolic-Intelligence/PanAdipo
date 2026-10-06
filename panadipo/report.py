@@ -70,6 +70,11 @@ def _hist_panel(ax, ref_q, est, log=False, xlabel="", threshold=None):
 
 
 def _nomogram_panel(ax, calib: EATCalibration, group: dict, score: float):
+    thr = group["paper_score_threshold"]["threshold"]
+    ax.axvline(thr, color=INK2, lw=1, ls=(0, (3, 2)), zorder=1)
+    pt = group["paper_score_threshold"]
+    ax.text(thr, 1.0, f"threshold {thr:.3f}  \nsens {pt['sensitivity']}% · spec {pt['specificity']}%  ",
+            fontsize=7, color=INK2, va="top", ha="right" if thr > 0.15 else "left")
     xs = np.logspace(np.log10(0.002), 0, 200)
     lx = np.log10(xs)
     p = 1 / (1 + np.exp(-(group["logit_b0"] + group["logit_b1"] * lx)))
@@ -122,15 +127,19 @@ def study_report(row, out_path, calib: EATCalibration = None):
     _hist_panel(axes[2], ref["eat_volume_ml"], row["eat_volume_ml"], xlabel="EAT volume (mL)")
 
     if g:
-        _header(axes[3], f"Probability of high EAT ({grp})", f"{p_high:.0%}",
-                f"high EAT: EAT / heart volume ≥ {thr:.2f} (95th pct.)")
+        _header(axes[3], f"Probability of high EAT ({grp})", f"{p_high:.0%}", str(row.get("eat_flag", "")))
         _nomogram_panel(axes[3], calib, g, s)
 
+    bmi = row.get("bmi")
     demo = "" if not g else f"  ·  {g['sex']}, age {row['age']:.0f}"
+    if bmi is not None and np.isfinite(bmi):
+        demo += f"  ·  BMI {bmi:.1f}"
     fig.text(0.035, 0.95, f"PanAdipo  ·  study {row['study_id']}  ·  {int(row['n_clips'])} clips{demo}",
              fontsize=12, color=INK, weight="bold")
     fig.text(0.035, 0.025,
-             f"{ref_txt} Blue: this study.\n"
+             f"{ref_txt} Blue: this study."
+             + (f" Dashed (right): age-sex PanAdipo threshold for high EAT (EAT / heart volume ≥ {thr:.2f})."
+                if g else "") + "\n"
              f"EAT / heart volume = {calib.formula('eat_index')};  EAT (mL) = {calib.formula('eat_volume_ml')}.  "
              "Research use only — not a CT measurement.", fontsize=7, color=MUTED)
     out_path = Path(out_path)

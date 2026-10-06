@@ -1,6 +1,5 @@
 """
-DICOM -> AVI preprocessing (local-file port of the PanEcho/PanAdipo pipeline,
-Echo-pipeline/PanEcho/preprocess/preprocess_tte_eko.py).
+DICOM -> AVI preprocessing (local-file version of the original PanAdipo pipeline).
 
 Per multi-frame DICOM:
   1. read pixel data (single-frame / <16-frame objects are skipped as stills)
@@ -145,29 +144,52 @@ def find_dicoms(root):
     return out
 
 
-def read_demographics(dicom_paths, max_tries: int = 5) -> dict:
-    """Age (years) and sex from the first readable DICOM header of a study (pixel data not read).
+def read_study_info(dicom_paths, max_tries: int = 5) -> dict:
+    """Study-level fields from the first readable DICOM header (pixel data is not read).
 
-    Uses PatientAge (e.g. '063Y'), else StudyDate - PatientBirthDate; PatientSex 'M'/'F'.
-    Returns {'age': float or None, 'sex': 'male'/'female' or None}.
+    patient_id  PatientID                        (to track one patient across studies)
+    study_date  StudyDate, ISO YYYY-MM-DD        (time axis for tracking)
+    age         PatientAge (e.g. '063Y'), else StudyDate - PatientBirthDate, in years
+    sex         PatientSex -> 'male' / 'female'
+    bmi         PatientWeight (kg) / PatientSize (m)^2, if both are plausible
+    Missing fields are None.
     """
+    from datetime import datetime
+
+    def date(x):
+        try:
+            return datetime.strptime(str(x)[:8], "%Y%m%d")
+        except (TypeError, ValueError):
+            return None
+
     for p in list(dicom_paths)[:max_tries]:
         try:
             ds = pydicom.dcmread(str(p), stop_before_pixels=True, force=True)
         except Exception:
             continue
+        get = lambda k: getattr(ds, k, None) or None  # noqa: E731
+        sd, bd = date(get("StudyDate")), date(get("PatientBirthDate"))
+
         age = None
-        pa = str(getattr(ds, "PatientAge", "") or "").strip().upper()
-        if len(pa) >= 2 and pa[:-1].isdigit():
-            age = float(pa[:-1]) * {"Y": 1, "M": 1 / 12, "W": 1 / 52, "D": 1 / 365.25}.get(pa[-1], np.nan)
-        if age is None or not np.isfinite(age):
-            bd, sd = str(getattr(ds, "PatientBirthDate", "") or ""), str(getattr(ds, "StudyDate", "") or "")
-            try:
-                from datetime import datetime
-                age = (datetime.strptime(sd[:8], "%Y%m%d") - datetime.strptime(bd[:8], "%Y%m%d")).days / 365.25
-            except ValueError:
-                age = None
-        sex = {"M": "male", "F": "female"}.get(str(getattr(ds, "PatientSex", "") or "").strip().upper())
-        if age is not None or sex is not None:
-            return {"age": age, "sex": sex}
-    return {"age": None, "sex": None}
+        pa = str(get("PatientAge") or "").strip().upper()
+        if len(pa) >= 2 and pa[:-1].isdigit() and pa[-1] in "YMWD":
+            age = float(pa[:-1]) / {"Y": 1, "M": 12, "W": 52.18, "D": 365.25}[pa[-1]]
+        elif sd and bd:
+            age = (sd - bd).days / 365.25
+
+        bmi = None
+        try:
+            w, h = float(get("PatientWeight")), float(get("PatientSize"))
+            if 20 <= w <= 350 and 1.0 <= h <= 2.4:
+                bmi = w / h ** 2
+        except (TypeError, ValueError):
+            pass
+
+        info = {"patient_id": str(get("PatientID")) if get("PatientID") else None,
+                "study_date": sd.strftime("%Y-%m-%d") if sd else None,
+                "age": age,
+                "sex": {"M": "male", "F": "female"}.get(str(get("PatientSex") or "").strip().upper()),
+                "bmi": bmi}
+        if any(v is not None for v in info.values()):
+            return info
+    return {"patient_id": None, "study_date": None, "age": None, "sex": None, "bmi": None}

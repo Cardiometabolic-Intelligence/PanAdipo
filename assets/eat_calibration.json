@@ -830,7 +830,23 @@
      224.28634277343747,
      233.29616483048233,
      246.82873230338097
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.118,
+     "threshold_95int": [
+      0.118,
+      0.218
+     ],
+     "sensitivity": 92,
+     "specificity": 75,
+     "ppv": 16,
+     "npv": 99,
+     "auroc": 0.91,
+     "auroc_ci": [
+      0.86,
+      0.94
+     ]
+    }
    },
    {
     "age_group": "50-64",
@@ -1236,7 +1252,23 @@
      175.71969077076906,
      186.64218438720692,
      196.21549897766113
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.213,
+     "threshold_95int": [
+      0.125,
+      0.22
+     ],
+     "sensitivity": 81,
+     "specificity": 87,
+     "ppv": 25,
+     "npv": 99,
+     "auroc": 0.91,
+     "auroc_ci": [
+      0.87,
+      0.94
+     ]
+    }
    },
    {
     "age_group": "<50",
@@ -1642,7 +1674,23 @@
      182.79884655012845,
      187.1092053222656,
      199.35439453124994
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.12,
+     "threshold_95int": [
+      0.072,
+      0.134
+     ],
+     "sensitivity": 89,
+     "specificity": 90,
+     "ppv": 31,
+     "npv": 99,
+     "auroc": 0.94,
+     "auroc_ci": [
+      0.91,
+      0.97
+     ]
+    }
    },
    {
     "age_group": "<50",
@@ -2048,7 +2096,23 @@
      139.4417109764233,
      146.65049308161733,
      172.3153435179235
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.094,
+     "threshold_95int": [
+      0.058,
+      0.133
+     ],
+     "sensitivity": 93,
+     "specificity": 87,
+     "ppv": 28,
+     "npv": 100,
+     "auroc": 0.95,
+     "auroc_ci": [
+      0.92,
+      0.98
+     ]
+    }
    },
    {
     "age_group": ">=65",
@@ -2454,7 +2518,23 @@
      236.84188126439327,
      258.5880554971946,
      273.80264741064474
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.219,
+     "threshold_95int": [
+      0.164,
+      0.227
+     ],
+     "sensitivity": 92,
+     "specificity": 86,
+     "ppv": 26,
+     "npv": 100,
+     "auroc": 0.93,
+     "auroc_ci": [
+      0.9,
+      0.96
+     ]
+    }
    },
    {
     "age_group": ">=65",
@@ -2860,8 +2940,29 @@
      191.8809814453125,
      198.68792724609375,
      209.2839689505249
-    ]
+    ],
+    "paper_score_threshold": {
+     "threshold": 0.295,
+     "threshold_95int": [
+      0.19,
+      0.352
+     ],
+     "sensitivity": 83,
+     "specificity": 87,
+     "ppv": 25,
+     "npv": 99,
+     "auroc": 0.91,
+     "auroc_ci": [
+      0.87,
+      0.94
+     ]
+    }
    }
-  ]
+  ],
+  "paper_threshold_source": "Supplemental Table 6: age- and sex-specific PanAdipo thresholds for high EAT"
+ },
+ "occult_adiposity_definition": {
+  "rule": "PanAdipo score >= age-sex threshold (Supplemental Table 6) and BMI < 30 kg/m2",
+  "bmi_cutoff": 30.0
  }
 }

@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PanAdipo — epicardial adiposity from routine echocardiograms</title>
+<meta name="description" content="PanAdipo: AI-enabled echocardiography for prominent epicardial adiposity. Nomogram calculator and results tracker.">
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-0: #f4f3ef; --surface-1: #fcfcfb; --surface-2: #ffffff; --border: #e3e2dc; --grid: #ecebe7;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #8a8984;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --ref: #d9d8d3;
+    --good: #0f7b3e; --good-bg: #e3f3e8; --warn: #9a5b00; --warn-bg: #fdf0d8; --crit: #b42318; --crit-bg: #fbe5e2;
+    --code-bg: #f1f0ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #222220; --border: #33322f; --grid: #2a2a28;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ref: #3a3936;
+      --good: #6fd39a; --good-bg: #173322; --warn: #f2b65a; --warn-bg: #3a2a10; --crit: #ff8a7a; --crit-bg: #3d1a16;
+      --code-bg: #262624;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #222220; --border: #33322f; --grid: #2a2a28;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --ref: #3a3936;
+    --good: #6fd39a; --good-bg: #173322; --warn: #f2b65a; --warn-bg: #3a2a10; --crit: #ff8a7a; --crit-bg: #3d1a16;
+    --code-bg: #262624;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .viz-root { background: var(--surface-0); color: var(--text-primary); min-height: 100vh;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  header.top { border-bottom: 1px solid var(--border); background: var(--surface-1); position: sticky; top: 0; z-index: 5; }
+  header.top .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+  header.top b { font-size: 18px; letter-spacing: .2px; }
+  header.top nav { display: flex; gap: 18px; flex: 1; }
+  header.top a { color: var(--text-secondary); text-decoration: none; font-size: 14px; }
+  header.top a:hover { color: var(--text-primary); }
+  button, .btn { font: inherit; font-size: 14px; border: 1px solid var(--border); background: var(--surface-2);
+    color: var(--text-primary); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+  button.primary { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--series-1); outline-offset: 2px; }
+  .hero { padding: 54px 0 28px; }
+  .hero h1 { font-size: 40px; line-height: 1.12; margin: 0 0 12px; letter-spacing: -.5px; }
+  .hero p.lead { font-size: 18px; color: var(--text-secondary); max-width: 760px; margin: 0 0 20px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0 8px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { font-size: 13px; color: var(--text-secondary); }
+  .tile .value { font-size: 28px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .sub { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  section { padding: 34px 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: 24px; margin: 0 0 6px; }
+  section p.intro { color: var(--text-secondary); margin: 0 0 20px; max-width: 800px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .step .n { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; }
+  .step h3 { font-size: 16px; margin: 4px 0 6px; }
+  .step p { font-size: 13.5px; color: var(--text-secondary); margin: 0; }
+  figure { margin: 18px 0 0; }
+  figure img { width: 100%; border-radius: 10px; border: 1px solid var(--border); background: #fff; }
+  figcaption { font-size: 12.5px; color: var(--text-muted); margin-top: 6px; }
+  .calc { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .field input[type=number], .field select { width: 100%; font: inherit; padding: 7px 9px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); }
+  .field input[type=range] { width: 100%; accent-color: var(--series-1); }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: var(--surface-2); padding: 7px 16px; }
+  .seg button[aria-pressed=true] { background: var(--series-1); color: #fff; }
+  .hint { font-size: 12px; color: var(--text-muted); }
+  .outtiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .tile.wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 16px; }
+  .tile .value.sm { font-size: 19px; line-height: 1.3; padding-top: 6px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 4px 10px;
+    border-radius: 999px; white-space: nowrap; }
+  .badge.good { color: var(--good); background: var(--good-bg); }
+  .badge.warn { color: var(--warn); background: var(--warn-bg); }
+  .badge.crit { color: var(--crit); background: var(--crit-bg); }
+  .badge.none { color: var(--text-secondary); background: var(--code-bg); }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--text-secondary); font-size: 11px; font-family: inherit; }
+  .chart .axis line, .chart .axis path { stroke: var(--text-muted); }
+  .chart .gridline { stroke: var(--grid); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 4px; }
+  .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+    background: var(--c); margin-right: 6px; vertical-align: middle; }
+  .legend span.dash::before { background: none; border-top: 2px dashed var(--c); height: 0; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--text-primary); box-shadow: 0 4px 14px rgba(0,0,0,.12);
+    white-space: nowrap; opacity: 0; transition: opacity .08s; z-index: 3; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+  .tablewrap { overflow-x: auto; max-height: 360px; }
+  pre { background: var(--code-bg); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 13px; margin: 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .drop { border: 1.5px dashed var(--border); border-radius: 12px; padding: 18px; text-align: center; color: var(--text-secondary); }
+  .drop.over { border-color: var(--series-1); color: var(--text-primary); }
+  .muted { color: var(--text-muted); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  footer { padding: 30px 0 50px; color: var(--text-muted); font-size: 13px; border-top: 1px solid var(--border); }
+  footer a { color: var(--text-secondary); }
+  @media (max-width: 860px) {
+    .kpis, .steps, .outtiles { grid-template-columns: 1fr 1fr; }
+    .calc, .two { grid-template-columns: 1fr; }
+    header.top nav { display: none; }
+    .hero h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+
+<header class="top"><div class="wrap">
+  <b>PanAdipo</b>
+  <nav>
+    <a href="#how">How it works</a><a href="#calculator">Nomogram calculator</a>
+    <a href="#tracker">Track results</a><a href="#run">Run it</a><a href="#cite">Cite</a>
+  </nav>
+  <button id="theme" aria-label="Toggle light / dark theme">◐ Theme</button>
+</div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <h1>Epicardial adiposity from any routine echocardiogram</h1>
+    <p class="lead">PanAdipo is a video model that reads standard 2D echo clips (any view, TTE or POCUS), scores
+      prominent epicardial fat, and maps the score to CT-measured epicardial adipose tissue (EAT), with an
+      age- and sex-specific nomogram.</p>
+    <div class="kpis" id="kpis"></div>
+  </div>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <p class="intro">The model runs on your own computer: images never leave it. This page only does arithmetic on
+      scores, so you can explore the nomogram and review results without any data being sent anywhere.</p>
+    <div class="steps">
+      <div class="card step"><div class="n">Step 1</div><h3>Load a DICOM study</h3>
+        <p>Cine clips are masked to the ultrasound sector (no text, ECG or calipers) and resized to 256 × 256.</p></div>
+      <div class="card step"><div class="n">Step 2</div><h3>Score every clip</h3>
+        <p>PanAdipo scores 16 frames per clip; the study score is the mean over clips.</p></div>
+      <div class="card step"><div class="n">Step 3</div><h3>Estimate EAT</h3>
+        <p>The score maps to CT EAT volume (mL) and EAT / heart volume, calibrated on paired CCTA.</p></div>
+      <div class="card step"><div class="n">Step 4</div><h3>Nomogram &amp; tracking</h3>
+        <p>Age and sex give the probability of high EAT and a screening threshold; BMI flags occult adiposity.</p></div>
+    </div>
+    <figure><img src="figures/fig2a_echo_ct.jpg" alt="Echo frame, PanAdipo Grad-CAM++ attention over the epicardium, and paired CT segmentation of cardiac fat and heart volume">
+      <figcaption>Grad-CAM++ attention over the epicardium (left) and the paired CCTA reference standard (right):
+        segmentation of epicardial and paracardial fat and of the cardiac structures summed as heart volume.</figcaption></figure>
+  </section>
+
+  <section id="calculator">
+    <h2>Nomogram calculator</h2>
+    <p class="intro">Enter a PanAdipo study score (from the pipeline) with the patient's age and sex. BMI is
+      optional and enables the occult-adiposity flag.</p>
+    <div class="calc">
+      <div class="card">
+        <div class="field"><label for="score">PanAdipo score</label>
+          <input type="number" id="score" min="0.001" max="1" step="0.001" value="0.25">
+          <input type="range" id="scoreRange" min="-3" max="0" step="0.01" value="-0.602" aria-label="PanAdipo score (log scale)">
+          <div class="hint">Slider is on a log scale (0.001 – 1).</div></div>
+        <div class="field"><label for="age">Age (years)</label><input type="number" id="age" min="18" max="100" value="58"></div>
+        <div class="field"><label>Sex</label>
+          <div class="seg" role="group" aria-label="Sex">
+            <button type="button" data-sex="female" aria-pressed="true">Female</button>
+            <button type="button" data-sex="male" aria-pressed="false">Male</button></div></div>
+        <div class="field"><label for="bmi">BMI (kg/m², optional)</label><input type="number" id="bmi" min="12" max="80" step="0.1" placeholder="e.g. 26.5"></div>
+        <div class="hint" id="groupHint"></div>
+      </div>
+      <div>
+        <div class="outtiles" id="outTiles"></div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between">
+            <div><b id="nomoTitle">Probability of high EAT</b>
+              <div class="hint">High EAT: EAT / heart volume ≥ 95th percentile for age group and sex (CT reference).</div></div>
+            <button type="button" id="nomoTableBtn" aria-pressed="false">Table view</button>
+          </div>
+          <div class="legend" id="nomoLegend"></div>
+          <div class="chart" id="nomoChart"></div>
+          <div id="nomoTable" hidden></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tracker">
+    <h2>Track results over time</h2>
+    <p class="intro">Open a <code>study_predictions.csv</code> produced by the pipeline (or several). The file is read
+      by your browser only. Patients with two or more dated studies can be followed over time; occult adiposity and
+      screen-positive studies are summarised.</p>
+    <div class="drop card" id="drop">
+      <div class="row" style="justify-content:center">
+        <label class="btn" for="file">Open study_predictions.csv</label>
+        <input type="file" id="file" accept=".csv" multiple hidden>
+        <button type="button" id="demoBtn">Load synthetic demo</button>
+      </div>
+      <div class="hint" style="margin-top:8px">…or drop CSV files here. Needs <code>study_id, panadipo_score</code>;
+        uses <code>patient_id, study_date, age, sex, bmi</code> when present.</div>
+    </div>
+    <div id="trackOut" hidden>
+      <div class="kpis" id="trackTiles" style="margin-top:16px"></div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <b>Patient trajectory</b>
+          <select id="patient" aria-label="Patient"></select>
+        </div>
+        <div class="legend" id="trajLegend"></div>
+        <div class="two"><div class="chart" id="trajScore"></div><div class="chart" id="trajEat"></div></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="row" style="justify-content:space-between"><b>Studies</b>
+          <label class="hint"><input type="checkbox" id="onlyFlagged"> screen-positive only</label></div>
+        <div class="tablewrap" id="studyTable"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>Run it on your studies</h2>
+    <p class="intro">Inference needs Python and (ideally) a GPU, so it runs locally. Either the command line or the
+      local app (<code>python app.py</code>, a browser interface on your own machine) gives the same results.</p>
+    <pre><code>git clone https://github.com/Cardiometabolic-Intelligence/PanAdipo.git &amp;&amp; cd PanAdipo
+conda env create -f envs/panadipo.yml &amp;&amp; conda activate panadipo
+./copy_weights.sh                                   # model weights (v1.0 release)
+
+python run_pipeline.py --studies_root /path/to/echo_dicoms --out_dir results/
+python app.py                                       # or: interactive local app at http://127.0.0.1:7860</code></pre>
+  </section>
+
+  <section id="cite">
+    <h2>Cite</h2>
+    <p>Aminorroaya A, …, Oikonomou EK<sup>*</sup>. AI-Enabled Echocardiography Identifies Prominent Epicardial Adiposity
+      Associated with an Adverse Cardiometabolic Profile. <i>Under review</i>, 2026.
+      <span class="muted">*Corresponding author: evangelos.oikonomou@yale.edu</span></p>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  Research use only — not a medical device; estimates are population-level and are not a CT measurement.
+  Code: PolyForm Noncommercial 1.0.0 · Weights: CC BY-NC-SA 4.0 · academic / non-commercial use only.
+  © 2026 Yale University · <a href="mailto:evangelos.oikonomou@yale.edu">evangelos.oikonomou@yale.edu</a>
+</div></footer>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+"use strict";
+// ── calibration (same math as panadipo/eat.py) ──────────────────────────────
+let C = null;
+const AGE_KEYS = ["<50", "50-64", ">=65"];
+const AGE_LABEL = { "<50": "<50 y", "50-64": "50–64 y", ">=65": "≥65 y" };
+const AGE_VAR = { "<50": "--series-1", "50-64": "--series-2", ">=65": "--series-3" };
+const css = v => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(v).trim();
+const log10 = Math.log10;
+
+function interp(x, xp, fp, left, right) {
+  if (x <= xp[0]) return left !== undefined ? left : fp[0];
+  if (x >= xp[xp.length - 1]) return right !== undefined ? right : fp[fp.length - 1];
+  let i = 1; while (xp[i] < x) i++;
+  const t = (x - xp[i - 1]) / (xp[i] - xp[i - 1] || 1);
+  return fp[i - 1] + t * (fp[i] - fp[i - 1]);
+}
+function normSex(s) { s = String(s ?? "").trim().toLowerCase(); return { m: "male", male: "male", f: "female", female: "female" }[s] || null; }
+function ageGroupKey(age) { const b = C.age_sex.age_bins; return age < b[0] ? "<50" : age < b[1] ? "50-64" : ">=65"; }
+function group(age, sex) {
+  sex = normSex(sex);
+  if (!sex || !Number.isFinite(age)) return null;
+  const k = ageGroupKey(age);
+  return C.age_sex.groups.find(g => g.age_group === k && g.sex === sex);
+}
+const logistic = (g, s) => 1 / (1 + Math.exp(-(g.logit_b0 + g.logit_b1 * log10(Math.min(Math.max(s, 1e-6), 1)))));
+
+function estimate(score, age, sex, bmi) {
+  const s = +score, lx = log10(Math.min(Math.max(s, 1e-6), 1)), r = { score: s };
+  for (const [t, f] of Object.entries(C.formula)) {
+    const mu = f.a * lx + f.b, q = f.resid_quantiles;
+    r[t] = Math.max(mu, f.floor); r[t + "_lo"] = Math.max(mu + q.q10, 0); r[t + "_hi"] = mu + q.q90;
+  }
+  const rq = C.reference_score_quantiles;
+  r.pct = interp(s, rq, rq.map((_, i) => i * 100 / (rq.length - 1)));
+  const g = group(+age, sex);
+  r.group = g;
+  if (g) {
+    const lv = g.quantile_levels, thr = g.paper_score_threshold.threshold, cut = C.occult_adiposity_definition.bmi_cutoff;
+    r.p = logistic(g, s);
+    r.pctAS = interp(s, g.score_quantiles, lv, lv[0] / 2, (100 + lv[lv.length - 1]) / 2);
+    r.thr = thr; r.above = s >= thr; r.hiThr = g.high_eat_threshold_eat_index;
+    const hasBmi = Number.isFinite(bmi) && bmi > 0;
+    r.occult = !r.above ? false : hasBmi ? bmi < cut : null;
+    r.flag = !r.above ? "screen-negative" : !hasBmi ? "screen-positive (BMI unavailable)"
+      : bmi < cut ? `screen-positive · occult (BMI <${cut})` : "screen-positive · with obesity";
+  } else { r.flag = "age/sex unavailable"; }
+  return r;
+}
+function badge(flag) {
+  const k = !flag ? "none" : flag.includes("occult") ? "crit" : flag.startsWith("screen-positive") ? "warn"
+    : flag === "screen-negative" ? "good" : "none";
+  const icon = { crit: "▲", warn: "●", good: "✓", none: "–" }[k];
+  return `<span class="badge ${k}"><span aria-hidden="true">${icon}</span>${flag || "—"}</span>`;
+}
+const fmt = (x, d) => Number.isFinite(x) ? x.toFixed(d) : "—";
+const pctFmt = x => Number.isFinite(x) ? (x < 0.01 ? "<1%" : Math.round(x * 100) + "%") : "—";
+const ord = n => { n = Math.round(n); const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+const tileHTML = (label, value, sub) => `<div class="tile"><div class="label">${label}</div>${String(value).startsWith('<span class="value') ? value.replace('<span', '<div').replace('</span>', '</div>') : `<div class="value">${value}</div>`}<div class="sub">${sub || "&nbsp;"}</div></div>`;
+function niceTicks(lo, hi, n = 5) {
+  const raw = (hi - lo) / Math.max(1, n - 1), mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(st => st >= raw);
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-12; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+
+// ── tiny SVG chart helpers ──────────────────────────────────────────────────
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const tip = document.getElementById("tip");
+function showTip(container, html, x, y) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const r = container.getBoundingClientRect(), root = document.querySelector(".viz-root").getBoundingClientRect();
+  let left = r.left - root.left + x + 14, top = r.top - root.top + y - 10;
+  if (left + tip.offsetWidth > root.width - 8) left -= tip.offsetWidth + 28;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+}
+const hideTip = () => { tip.style.opacity = 0; };
+function frame(container, W, H, m) {
+  container.innerHTML = "";
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, container);
+  return { svg, W, H, m, iw: W - m.l - m.r, ih: H - m.t - m.b };
+}
+function axisX(f, ticks, sx, labelFn, title) {
+  const g = el("g", { class: "axis" }, f.svg);
+  el("line", { x1: f.m.l, x2: f.W - f.m.r, y1: f.H - f.m.b, y2: f.H - f.m.b }, g);
+  for (const t of ticks) {
+    const x = sx(t);
+    el("line", { x1: x, x2: x, y1: f.H - f.m.b, y2: f.H - f.m.b + 4 }, g);
+    el("text", { x, y: f.H - f.m.b + 16, "text-anchor": "middle" }, g).textContent = labelFn(t);
+  }
+  if (title) el("text", { x: f.m.l + f.iw / 2, y: f.H - 4, "text-anchor": "middle" }, g).textContent = title;
+}
+function axisY(f, ticks, sy, labelFn) {
+  for (const t of ticks) {
+    const y = sy(t);
+    el("line", { x1: f.m.l, x2: f.W - f.m.r, y1: y, y2: y, class: "gridline" }, f.svg);
+    el("text", { x: f.m.l - 6, y: y + 4, "text-anchor": "end" }, f.svg).textContent = labelFn(t);
+  }
+}
+const pathFrom = pts => pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
+
+// ── calculator ──────────────────────────────────────────────────────────────
+const state = { sex: "female" };
+function readCalc() {
+  return { score: parseFloat(document.getElementById("score").value), age: parseFloat(document.getElementById("age").value),
+           sex: state.sex, bmi: parseFloat(document.getElementById("bmi").value) };
+}
+function renderCalc() {
+  const inp = readCalc();
+  if (!(inp.score > 0 && inp.score <= 1)) return;
+  const r = estimate(inp.score, inp.age, inp.sex, inp.bmi);
+  document.getElementById("outTiles").innerHTML =
+    tileHTML("EAT / heart volume", fmt(r.eat_index, 2), `80% PI ${fmt(r.eat_index_lo, 2)}–${fmt(r.eat_index_hi, 2)}`) +
+    tileHTML("EAT volume", fmt(r.eat_volume_ml, 0) + " mL", `80% PI ${fmt(r.eat_volume_ml_lo, 0)}–${fmt(r.eat_volume_ml_hi, 0)} mL`) +
+    tileHTML("P(high EAT)", r.group ? pctFmt(r.p) : "—", r.group ? `${ord(r.pctAS)} percentile for age & sex` : `${ord(r.pct)} percentile (pooled)`) +
+    `<div class="tile wide"><div class="label">Screen (age-sex threshold)</div><div>${badge(r.flag)}</div>
+      <div class="sub">${r.group ? "threshold " + r.thr.toFixed(3) + " · sens " + r.group.paper_score_threshold.sensitivity + "% · spec " + r.group.paper_score_threshold.specificity + "%" : "add age and sex"}</div></div>`;
+  document.getElementById("groupHint").textContent = r.group
+    ? `Group: ${r.group.sex}, ${AGE_LABEL[r.group.age_group]} · CT reference n = ${r.group.n.toLocaleString()} · high-EAT cutoff EAT/heart ≥ ${r.hiThr.toFixed(2)}`
+    : "Enter age and sex to use the age-sex nomogram.";
+  drawNomogram(inp, r);
+  renderNomoTable(inp);
+}
+function drawNomogram(inp, r) {
+  const box = document.getElementById("nomoChart");
+  const f = frame(box, 760, 330, { l: 48, r: 18, t: 14, b: 40 });
+  const sx = s => f.m.l + (log10(s) + 3) / 3 * f.iw, sy = p => f.m.t + (1 - p) * f.ih;
+  const sex = normSex(inp.sex) || "female";
+  axisY(f, [0, .25, .5, .75, 1], sy, p => Math.round(p * 100) + "%");
+  axisX(f, [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1], sx, t => String(t), "PanAdipo score (log scale)");
+  document.getElementById("nomoTitle").textContent = `Probability of high EAT — ${sex}`;
+  document.getElementById("nomoLegend").innerHTML = AGE_KEYS.map(k => `<span style="--c:var(${AGE_VAR[k]})">${AGE_LABEL[k]}</span>`).join("")
+    + (r.group ? `<span class="dash" style="--c:var(--text-secondary)">threshold (${AGE_LABEL[r.group.age_group]})</span>` : "");
+  const xs = Array.from({ length: 160 }, (_, i) => Math.pow(10, -3 + 3 * i / 159));
+  const gs = AGE_KEYS.map(k => C.age_sex.groups.find(g => g.sex === sex && g.age_group === k));
+  if (r.group) {
+    const x = sx(r.thr);
+    el("line", { x1: x, x2: x, y1: f.m.t, y2: f.H - f.m.b, stroke: css("--text-secondary"), "stroke-dasharray": "4 3", "stroke-width": 1 }, f.svg);
+  }
+  gs.forEach((g, i) => {
+    const mine = r.group && g === r.group;
+    el("path", { d: pathFrom(xs.map(s => [sx(s), sy(logistic(g, s))])), fill: "none", stroke: css(AGE_VAR[AGE_KEYS[i]]),
+                 "stroke-width": mine ? 3 : 2, opacity: r.group && !mine ? 0.45 : 1, "stroke-linecap": "round" }, f.svg);
+  });
+  if (r.group) {
+    el("circle", { cx: sx(r.score), cy: sy(r.p), r: 7, fill: css("--series-1"), stroke: css("--surface-1"), "stroke-width": 2.5 }, f.svg);
+  }
+  // hover crosshair
+  const cross = el("line", { y1: f.m.t, y2: f.H - f.m.b, stroke: css("--text-muted"), "stroke-width": 1, opacity: 0 }, f.svg);
+  const hit = el("rect", { x: f.m.l, y: f.m.t, width: f.iw, height: f.ih, fill: "transparent" }, f.svg);
+  hit.addEventListener("mousemove", ev => {
+    const pt = f.svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    const p = pt.matrixTransform(f.svg.getScreenCTM().inverse());
+    const s = Math.pow(10, (p.x - f.m.l) / f.iw * 3 - 3);
+    cross.setAttribute("x1", p.x); cross.setAttribute("x2", p.x); cross.setAttribute("opacity", 1);
+    const scale = box.getBoundingClientRect().width / f.W;
+    showTip(box, `<b>score ${s < 0.01 ? s.toFixed(4) : s.toFixed(3)}</b><br>` +
+      gs.map((g, i) => `<span style="color:var(${AGE_VAR[AGE_KEYS[i]]})">■</span> ${AGE_LABEL[AGE_KEYS[i]]}: ${pctFmt(logistic(g, s))}`).join("<br>"),
+      p.x * scale, p.y * scale);
+  });
+  hit.addEventListener("mouseleave", () => { cross.setAttribute("opacity", 0); hideTip(); });
+}
+function renderNomoTable(inp) {
+  const sex = normSex(inp.sex) || "female";
+  const rows = C.age_sex.groups.slice().sort((a, b) => a.sex.localeCompare(b.sex) || AGE_KEYS.indexOf(a.age_group) - AGE_KEYS.indexOf(b.age_group));
+  document.getElementById("nomoTable").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Group</th><th>n (high EAT)</th>
+    <th>AUROC</th><th>Score threshold</th><th>Sens.</th><th>Spec.</th><th>PPV</th><th>NPV</th><th>High-EAT cutoff (EAT/heart)</th></tr></thead><tbody>` +
+    rows.map(g => { const t = g.paper_score_threshold; return `<tr${g.sex === sex ? "" : ' class="muted"'}><td>${g.sex}, ${AGE_LABEL[g.age_group]}</td>
+      <td>${g.n.toLocaleString()} (${g.n_high_eat})</td><td>${t.auroc.toFixed(2)}</td><td>${t.threshold.toFixed(3)}</td>
+      <td>${t.sensitivity}%</td><td>${t.specificity}%</td><td>${t.ppv}%</td><td>${t.npv}%</td><td>${g.high_eat_threshold_eat_index.toFixed(2)}</td></tr>`; }).join("") +
+    `</tbody></table></div><div class="hint" style="margin-top:6px">Supplemental Table 6. Thresholds favour sensitivity; at ~5% prevalence a positive screen has PPV 16–31%.</div>`;
+}
+
+// ── tracker ─────────────────────────────────────────────────────────────────
+let STUDIES = [];
+function parseCSV(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  const head = rows.shift().map(h => h.trim());
+  return rows.filter(r => r.length > 1).map(r => Object.fromEntries(head.map((h, i) => [h, r[i]])));
+}
+function ingest(records) {
+  const byId = new Map(STUDIES.map(s => [s.study_id, s]));
+  for (const rec of records) {
+    const score = parseFloat(rec.panadipo_score);
+    if (!rec.study_id || !(score > 0)) continue;
+    const age = parseFloat(rec.age), bmi = parseFloat(rec.bmi);
+    const e = estimate(score, age, rec.sex, bmi);
+    byId.set(rec.study_id, { study_id: rec.study_id, patient_id: rec.patient_id || "", date: rec.study_date || "",
+      n_clips: rec.n_clips, age, sex: normSex(rec.sex), bmi, ...e });
+  }
+  STUDIES = [...byId.values()];
+  renderTracker();
+}
+function renderTracker() {
+  document.getElementById("trackOut").hidden = STUDIES.length === 0;
+  if (!STUDIES.length) return;
+  const pos = STUDIES.filter(s => s.flag.startsWith("screen-positive")), occ = STUDIES.filter(s => s.occult === true);
+  const patients = groupPatients();
+  const serial = [...patients.entries()].filter(([, v]) => v.length >= 2);
+  document.getElementById("trackTiles").innerHTML =
+    tileHTML("Studies", STUDIES.length, `${patients.size} patients · ${serial.length} with serial studies`) +
+    tileHTML("Screen-positive", pos.length, "score ≥ age-sex threshold") +
+    tileHTML("Occult adiposity", occ.length, "screen-positive and BMI < 30") +
+    tileHTML("No age/sex", STUDIES.filter(s => !s.group).length, "pooled estimates only");
+  const sel = document.getElementById("patient"), prev = sel.value;
+  const ids = [...serial.map(([k]) => k), ...[...patients.keys()].filter(k => patients.get(k).length < 2)];
+  sel.innerHTML = ids.map(k => `<option value="${k}">${k} (${patients.get(k).length} ${patients.get(k).length > 1 ? "studies" : "study"})</option>`).join("");
+  if (ids.includes(prev)) sel.value = prev;
+  drawTrajectory(sel.value);
+  renderStudyTable();
+}
+function groupPatients() {
+  const m = new Map();
+  for (const s of STUDIES) { const k = s.patient_id || s.study_id; if (!m.has(k)) m.set(k, []); m.get(k).push(s); }
+  for (const v of m.values()) v.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  return m;
+}
+function drawTrajectory(pid) {
+  const list = (groupPatients().get(pid) || []).filter(s => s.date && !isNaN(Date.parse(s.date)));
+  document.getElementById("trajLegend").innerHTML = `<span style="--c:var(--series-1)">this patient</span>
+    <span class="dash" style="--c:var(--text-secondary)">age-sex threshold / high-EAT cutoff</span>
+    <span style="--c:var(--crit)">▲ occult adiposity</span>`;
+  for (const [id, key, lo, hi, thrKey, title, log] of [
+      ["trajScore", "score", null, null, "thr", "PanAdipo score", true],
+      ["trajEat", "eat_index", "eat_index_lo", "eat_index_hi", "hiThr", "Estimated EAT / heart volume", false]]) {
+    const box = document.getElementById(id);
+    if (!list.length) { box.innerHTML = `<p class="hint">No dated studies for this patient (needs <code>study_date</code>).</p>`; continue; }
+    const f = frame(box, 520, 270, { l: 46, r: 14, t: 26, b: 34 });
+    el("text", { x: f.m.l, y: 14 }, f.svg).textContent = title;
+    const t = list.map(s => Date.parse(s.date)), pad = Math.max(60 * 864e5, (Math.max(...t) - Math.min(...t)) * 0.06);
+    const t0 = Math.min(...t) - pad, t1 = Math.max(...t) + pad;
+    const vals = list.flatMap(s => [s[key], s[thrKey], lo ? s[lo] : null, hi ? s[hi] : null]).filter(Number.isFinite);
+    let y0 = Math.min(...vals), y1 = Math.max(...vals);
+    if (log) { y0 = Math.max(1e-3, y0 / 1.3); y1 = Math.min(1, y1 * 1.3); } else { const d = (y1 - y0) * 0.12 || 0.05; y0 = Math.max(0, y0 - d); y1 += d; }
+    const sx = v => f.m.l + (v - t0) / (t1 - t0) * f.iw;
+    const sy = log ? v => f.m.t + (1 - (log10(v) - log10(y0)) / (log10(y1) - log10(y0))) * f.ih : v => f.m.t + (1 - (v - y0) / (y1 - y0)) * f.ih;
+    const yt = log ? [0.001, 0.003, 0.01, 0.03, 0.1, 0.2, 0.3, 0.5, 1].filter(v => v >= y0 && v <= y1)
+                   : niceTicks(y0, y1, 5);
+    axisY(f, yt, sy, v => log ? String(v) : v.toFixed(2));
+    const yrs = []; for (let y = new Date(t0).getFullYear() + 1; y <= new Date(t1).getFullYear(); y++) yrs.push(Date.UTC(y, 0, 1));
+    const step = Math.max(1, Math.ceil(yrs.length / 6));
+    axisX(f, yrs.filter((_, i) => i % step === 0), sx, v => String(new Date(v).getUTCFullYear()));
+    if (lo) list.forEach(s => { if (Number.isFinite(s[lo])) el("line", { x1: sx(Date.parse(s.date)), x2: sx(Date.parse(s.date)), y1: sy(s[lo]), y2: sy(s[hi]),
+      stroke: css("--series-1"), "stroke-width": 6, opacity: 0.25, "stroke-linecap": "round" }, f.svg); });
+    const thrPts = []; list.forEach((s, i) => { if (Number.isFinite(s[thrKey])) {
+      const x = sx(Date.parse(s.date)), xn = i < list.length - 1 ? sx(Date.parse(list[i + 1].date)) : x; thrPts.push([x, sy(s[thrKey])], [xn, sy(s[thrKey])]); } });
+    if (thrPts.length) el("path", { d: pathFrom(thrPts), fill: "none", stroke: css("--text-secondary"), "stroke-dasharray": "4 3", "stroke-width": 1 }, f.svg);
+    el("path", { d: pathFrom(list.map(s => [sx(Date.parse(s.date)), sy(s[key])])), fill: "none", stroke: css("--series-1"), "stroke-width": 2 }, f.svg);
+    list.forEach(s => {
+      const x = sx(Date.parse(s.date)), y = sy(s[key]);
+      if (s.occult === true) el("path", { d: `M${x},${y - 15}l6,9h-12z`, fill: css("--crit") }, f.svg);
+      el("circle", { cx: x, cy: y, r: 6, fill: css("--series-1"), stroke: css("--surface-1"), "stroke-width": 2 }, f.svg);
+      const hit = el("circle", { cx: x, cy: y, r: 14, fill: "transparent" }, f.svg);
+      hit.addEventListener("mousemove", () => { const sc = box.getBoundingClientRect().width / f.W;
+        showTip(box, `<b>${s.date}</b> · ${s.study_id}<br>score ${fmt(s.score, 3)} · EAT/heart ${fmt(s.eat_index, 2)} · ${fmt(s.eat_volume_ml, 0)} mL<br>` +
+          (s.group ? `age ${fmt(s.age, 0)} · P(high EAT) ${pctFmt(s.p)}<br>` : "") + s.flag, x * sc, y * sc); });
+      hit.addEventListener("mouseleave", hideTip);
+    });
+  }
+}
+function renderStudyTable() {
+  const only = document.getElementById("onlyFlagged").checked;
+  const rows = STUDIES.filter(s => !only || s.flag.startsWith("screen-positive"))
+    .sort((a, b) => (a.patient_id || "").localeCompare(b.patient_id || "") || (a.date || "").localeCompare(b.date || ""));
+  document.getElementById("studyTable").innerHTML = `<table><thead><tr><th>Study</th><th>Patient</th><th>Date</th><th>Score</th>
+    <th>EAT/heart</th><th>EAT mL</th><th>Age</th><th>Sex</th><th>BMI</th><th>P(high EAT)</th><th>Screen</th></tr></thead><tbody>` +
+    rows.map(s => `<tr><td>${s.study_id}</td><td>${s.patient_id || "—"}</td><td>${s.date || "—"}</td><td>${fmt(s.score, 3)}</td>
+      <td>${fmt(s.eat_index, 2)}</td><td>${fmt(s.eat_volume_ml, 0)}</td><td>${fmt(s.age, 0)}</td><td>${s.sex || "—"}</td>
+      <td>${fmt(s.bmi, 1)}</td><td>${s.group ? pctFmt(s.p) : "—"}</td><td>${badge(s.flag)}</td></tr>`).join("") + "</tbody></table>";
+}
+function demoRecords() {
+  return [["DEMO1", "2016-04-02", 0.090, 61.0, 27.1], ["DEMO2", "2018-09-14", 0.141, 63.4, 27.8],
+          ["DEMO3", "2021-02-20", 0.226, 65.9, 28.4], ["DEMO4", "2024-07-08", 0.312, 69.3, 28.9],
+          ["DEMO5", "2019-05-11", 0.041, 47.2, 33.5], ["DEMO6", "2023-10-30", 0.118, 51.6, 34.1]]
+    .map(([id, d, s, a, b], i) => ({ study_id: id, patient_id: i < 4 ? "DEMO-PATIENT-A" : "DEMO-PATIENT-B", study_date: d,
+      panadipo_score: s, age: a, sex: i < 4 ? "female" : "male", bmi: b, n_clips: 50 + i }));
+}
+
+// ── wiring ──────────────────────────────────────────────────────────────────
+function kpis() {
+  const as = C.age_sex.groups.map(g => g.paper_score_threshold.auroc);
+  document.getElementById("kpis").innerHTML =
+    tileHTML("CT reference cohort", C.n_patients.toLocaleString(), "patients with echo + CCTA ≤ 1 year") +
+    tileHTML("ρ with indexed EAT", "0.76", "Spearman, EAT / heart volume") +
+    tileHTML("AUROC, high EAT", "0.90", `${Math.min(...as).toFixed(2)}–${Math.max(...as).toFixed(2)} across age-sex groups`) +
+    tileHTML("EAT / heart volume", `<span class="value sm">${C.formula.eat_index.a.toFixed(3)} · log₁₀(score) + ${C.formula.eat_index.b.toFixed(3)}</span>`, `R² ${C.formula.eat_index.r2.toFixed(2)} · manuscript Figure 3A`);
+}
+function wire() {
+  const score = document.getElementById("score"), range = document.getElementById("scoreRange");
+  score.addEventListener("input", () => { const v = parseFloat(score.value); if (v > 0) range.value = log10(v); renderCalc(); });
+  range.addEventListener("input", () => { score.value = Math.pow(10, parseFloat(range.value)).toFixed(3); renderCalc(); });
+  for (const id of ["age", "bmi"]) document.getElementById(id).addEventListener("input", renderCalc);
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+    state.sex = b.dataset.sex; document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b)); renderCalc(); }));
+  const tb = document.getElementById("nomoTableBtn");
+  tb.addEventListener("click", () => { const on = tb.getAttribute("aria-pressed") !== "true"; tb.setAttribute("aria-pressed", on);
+    document.getElementById("nomoTable").hidden = !on; document.getElementById("nomoChart").hidden = on; tb.textContent = on ? "Chart view" : "Table view"; });
+  const file = document.getElementById("file"), drop = document.getElementById("drop");
+  const read = files => Promise.all([...files].map(f => f.text())).then(ts => ingest(ts.flatMap(parseCSV)));
+  file.addEventListener("change", () => read(file.files));
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); read(e.dataTransfer.files); });
+  document.getElementById("demoBtn").addEventListener("click", () => ingest(demoRecords()));
+  document.getElementById("patient").addEventListener("change", e => drawTrajectory(e.target.value));
+  document.getElementById("onlyFlagged").addEventListener("change", renderStudyTable);
+  document.getElementById("theme").addEventListener("click", () => {
+    const root = document.documentElement, dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const cur = root.dataset.theme || (dark ? "dark" : "light");
+    root.dataset.theme = cur === "dark" ? "light" : "dark";
+    renderCalc(); if (STUDIES.length) renderTracker();
+  });
+  addEventListener("resize", hideTip);
+}
+fetch("calibration.json").then(r => r.json()).then(j => {
+    C = j; kpis(); wire(); renderCalc();
+    const q = new URLSearchParams(location.search);
+    if (q.get("demo")) ingest(demoRecords());
+    if (q.get("theme")) document.documentElement.dataset.theme = q.get("theme"), renderCalc(), STUDIES.length && renderTracker();
+  })
+  .catch(() => { document.getElementById("kpis").innerHTML = '<p class="hint">Could not load calibration.json — serve this page over http (e.g. GitHub Pages or <code>python -m http.server</code> in docs/).</p>'; });
+</script>
+</body>
+</html>

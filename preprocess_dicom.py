@@ -1,5 +1,5 @@
 """
-Step 1 — DICOM -> 256x256 .avi clips (PanEcho/PanAdipo preprocessing).
+Step 1 — DICOM -> 256x256 .avi clips (PanAdipo preprocessing).
 
 Inputs (pick one):
   --study_dir    DIR [DIR ...]   one folder per echocardiogram (study_id = folder name)

@@ -1,5 +1,4 @@
-# PanAdipo — single environment for the full pipeline (DICOM -> AVI -> inference -> EAT -> Grad-CAM++).
-# Verified 2026-10-03: bit-exact (|Δ| < 1e-7) with the manuscript predictions on 4,000 clips.
+# PanAdipo — single environment for the full pipeline (DICOM -> AVI -> inference -> EAT -> Grad-CAM++ -> app).
 #   conda env create -f envs/panadipo.yml && conda activate panadipo
 # CPU-only: replace the cu118 index URL with https://download.pytorch.org/whl/cpu
 name: panadipo
@@ -25,3 +24,4 @@ dependencies:
       - pillow
       - tqdm
       - grad-cam==1.5.5
+      - gradio==5.49.1          # local app (app.py)

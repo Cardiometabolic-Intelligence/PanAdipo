@@ -10,12 +10,12 @@ The PanAdipo model weights (the `best_model.pt` release asset) are licensed unde
   services, and clinical deployment for commercial purposes.
 - Adaptations (e.g. further fine-tuned weights) must be shared under the same license.
 
-This mirrors the license of the upstream **PanEcho** weights, from which PanAdipo is fine-tuned.
+This mirrors the license of the upstream foundation-model weights from which PanAdipo is fine-tuned.
 
 For commercial licensing inquiries, contact **evangelos.oikonomou@yale.edu**.
 
 > The **code** in this repository is licensed separately under the PolyForm Noncommercial
 > License 1.0.0 (see `LICENSE`).
 
-**Citation:** Aminorroaya A, …, Oikonomou EK\*. PanAdipo: AI-enabled echocardiography identifies
-prominent epicardial adiposity. *Under review*, 2026. (\*Corresponding author.)
+**Citation:** Aminorroaya A, …, Oikonomou EK\*. AI-Enabled Echocardiography Identifies Prominent Epicardial
+Adiposity Associated with an Adverse Cardiometabolic Profile. *Under review*, 2026. (\*Corresponding author.)
