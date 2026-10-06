@@ -12,11 +12,15 @@ The study_id is taken from the CSV, or else parsed from the filename
 Outputs in --out_dir:
   clip_predictions.csv    fpath, study_id, panadipo_prob
   study_predictions.csv   study_id, n_clips, panadipo_score (mean of clip probabilities),
-                          reference percentile, estimated CT EAT volume (+ 80% / 95% PIs)
+                          reference percentile, estimated CT EAT volume / EAT index (+ 80% / 95% PIs),
+                          and — if age and sex are given — the age-sex nomogram columns
+
+Age / sex (optional): --age/--sex (applied to every study) or --demographics CSV
+(study_id, age, sex). run_pipeline.py also reads them from the DICOM header.
 
 Usage:
     python infer.py --videos_csv work/videos.csv --out_dir work/
-    python infer.py --videos clip1.avi clip2.avi --out_dir out/
+    python infer.py --videos clip1.avi clip2.avi --out_dir out/ --age 58 --sex F
 """
 
 import argparse
@@ -27,7 +31,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from panadipo.eat import EATCalibration
+from panadipo.eat import EATCalibration, normalize_sex
 from panadipo.model import DEFAULT_CKPT, load_model
 from panadipo.video import ClipDataset
 
@@ -66,13 +70,32 @@ def aggregate_studies(clips: pd.DataFrame) -> pd.DataFrame:
             .agg(n_clips=(PROB_COL, "size"), panadipo_score=(PROB_COL, "mean")))
 
 
-STUDY_COLS = ["study_id", "n_clips", "panadipo_score", "score_percentile",
-              "eat_volume_ml", "eat_volume_ml_pi80_lo", "eat_volume_ml_pi80_hi",
-              "eat_index", "eat_index_pi80_lo", "eat_index_pi80_hi", "p_high_eat"]
+STUDY_COLS = ["study_id", "n_clips", "panadipo_score", "score_percentile", "eat_volume_ml",
+              "eat_index", "p_high_eat", "age", "sex", "age_sex_group", "high_eat_threshold",
+              "p_high_eat_age_sex", "score_percentile_age_sex"]
+
+
+def add_demographics(studies: pd.DataFrame, demographics=None, age=None, sex=None) -> pd.DataFrame:
+    """Attach age / sex columns from a (study_id, age, sex) table and/or scalar overrides."""
+    studies = studies.copy()
+    studies["age"], studies["sex"] = np.nan, None
+    if demographics is not None and len(demographics):
+        dem = demographics.copy()
+        dem["study_id"] = dem["study_id"].astype(str)
+        dem = dem.set_index("study_id")
+        studies["age"] = studies.study_id.map(pd.to_numeric(dem.get("age"), errors="coerce")) \
+            if "age" in dem else np.nan
+        studies["sex"] = studies.study_id.map(dem["sex"]) if "sex" in dem else None
+    if age is not None:
+        studies["age"] = float(age)
+    if sex is not None:
+        studies["sex"] = sex
+    studies["sex"] = [normalize_sex(x) for x in studies["sex"]]
+    return studies
 
 
 def run_inference(clips: pd.DataFrame, out_dir, checkpoint=DEFAULT_CKPT, device=None,
-                  batch_size=32, num_workers=4, eat=True):
+                  batch_size=32, num_workers=4, eat=True, demographics=None, age=None, sex=None):
     """Score clips (fpath, study_id) -> (clip table, study table); both written to out_dir."""
     device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
     out_dir = Path(out_dir)
@@ -88,9 +111,14 @@ def run_inference(clips: pd.DataFrame, out_dir, checkpoint=DEFAULT_CKPT, device=
         print(f"  {n_bad} clip(s) could not be decoded (panadipo_prob = NaN)")
     clips.to_csv(out_dir / "clip_predictions.csv", index=False)
 
-    studies = aggregate_studies(clips)
+    studies = add_demographics(aggregate_studies(clips), demographics, age, sex)
     if eat:
-        studies = pd.concat([studies, EATCalibration.load().predict(studies.panadipo_score)], axis=1)
+        est = EATCalibration.load().predict(studies.panadipo_score, age=studies.age.values,
+                                            sex=studies.sex.values)
+        studies = pd.concat([studies, est], axis=1)
+        n_as = int(studies["age_sex_group"].notna().sum())
+        print(f"  age-sex nomogram applied to {n_as}/{len(studies)} studies"
+              + ("" if n_as == len(studies) else " (others: age or sex unavailable)"))
     studies.to_csv(out_dir / "study_predictions.csv", index=False)
     return clips, studies
 
@@ -100,6 +128,13 @@ def print_studies(studies: pd.DataFrame, n=20):
     with pd.option_context("display.width", 250, "display.max_columns", 20,
                            "display.float_format", "{:.3f}".format):
         print(studies[cols].head(n).to_string(index=False))
+
+
+def add_demographic_args(p):
+    g = p.add_argument_group("age / sex (optional; enables the age-sex nomogram)")
+    g.add_argument("--age", type=float, help="age in years (applied to all studies)")
+    g.add_argument("--sex", help="M / F (applied to all studies)")
+    g.add_argument("--demographics", help="CSV with study_id, age, sex")
 
 
 def main():
@@ -114,10 +149,13 @@ def main():
     p.add_argument("--batch_size", type=int, default=32)
     p.add_argument("--num_workers", type=int, default=4)
     p.add_argument("--no_eat", action="store_true", help="skip the CT-calibrated EAT estimate")
+    add_demographic_args(p)
     args = p.parse_args()
 
+    dem = pd.read_csv(args.demographics) if args.demographics else None
     _, studies = run_inference(collect_clips(args), args.out_dir, args.checkpoint, args.device,
-                               args.batch_size, args.num_workers, eat=not args.no_eat)
+                               args.batch_size, args.num_workers, eat=not args.no_eat,
+                               demographics=dem, age=args.age, sex=args.sex)
     print_studies(studies)
     print(f"\n-> {Path(args.out_dir) / 'clip_predictions.csv'}\n-> {Path(args.out_dir) / 'study_predictions.csv'}")
 

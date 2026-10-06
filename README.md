@@ -5,7 +5,6 @@ Echo DICOM study ➜ PanAdipo score ➜ CT-calibrated EAT volume (mL) and EAT / 
 <p align="center">
 <img alt="python" src="https://img.shields.io/badge/python-3.10-3776AB">
 <img alt="pytorch" src="https://img.shields.io/badge/PyTorch-2.1-EE4C2C">
-<img alt="reproducibility" src="https://img.shields.io/badge/manuscript%20reproduction-bit--exact-1baf7a">
 <img alt="use" src="https://img.shields.io/badge/use-academic%20%2F%20non--commercial-8a8984">
 <img alt="license" src="https://img.shields.io/badge/code-PolyForm%20Noncommercial-2a78d6">
 <img alt="weights" src="https://img.shields.io/badge/weights-CC%20BY--NC--SA%204.0-4a3aa7">
@@ -29,25 +28,32 @@ conda env create -f envs/panadipo.yml && conda activate panadipo
 ./copy_weights.sh                       # downloads weights/best_model.pt from the v1.0 release
 
 python run_pipeline.py --study_dir /path/to/STUDY001 --out_dir results/
+python run_pipeline.py --study_dir /path/to/STUDY001 --out_dir results/ --age 58 --sex F   # override age / sex
 ```
 
+Age and sex are read from the DICOM header (`PatientAge` / `PatientBirthDate`, `PatientSex`) when present.
+`--age/--sex` or `--demographics` (a CSV with `study_id,age,sex`) override them. With age and sex, the
+outputs also include the **age- and sex-specific nomogram** (see below).
+
 ```
-# illustrative output (synthetic study ID, score = 0.25)
+# illustrative output (synthetic study, score = 0.25, female, 58 y)
 ── 1/3  DICOM -> AVI
 92 DICOMs from 1 studies -> results
   video: 57, still: 33, pixel_failed: 2
+  age / sex from DICOM header: 1/1 studies
 ── 2/3  PanAdipo inference
 57 clips from 1 studies | device=cuda
+  age-sex nomogram applied to 1/1 studies
 ── 3/3  Reports
 
-  study_id    n_clips  panadipo_score  score_percentile  eat_volume_ml  eat_volume_ml_pi80_lo  eat_volume_ml_pi80_hi  eat_index  eat_index_pi80_lo  eat_index_pi80_hi  p_high_eat
-  STUDY001       57           0.250            88.8        141.9                   97.7                  190.3      0.273              0.197              0.354       0.164
+ study_id  n_clips  panadipo_score  score_percentile  eat_volume_ml  eat_index  p_high_eat    age     sex  age_sex_group  high_eat_threshold  p_high_eat_age_sex  score_percentile_age_sex
+ STUDY001       57           0.250            88.815        141.879      0.273       0.164  58.000  female   female 50-64               0.359               0.134                    88.333
 ```
 
 Each study also gets a one-page report, `results/reports/<study_id>.png`:
 
-<p align="center"><img src="docs/figures/example_report.png" width="900"><br>
-<sub>Example report (synthetic score = 0.25). Grey: CT reference cohort. Blue: this study, with 80% / 95% prediction intervals.</sub></p>
+<p align="center"><img src="docs/figures/example_report.png" width="980"><br>
+<sub>Example report (synthetic study: score 0.25, female, 58 y). Grey: CT reference patients of the same age group and sex. Blue: this study.</sub></p>
 
 For many studies, point it at a folder of study folders (`--studies_root`) or at a manifest CSV
 (`--manifest`, columns `study_id,local_path`). A GPU is recommended; CPU works but is slow.
@@ -62,7 +68,10 @@ For many studies, point it at a folder of study folders (`--studies_root`) or at
 | `score_percentile` | Percentile of the score in the CT reference cohort (n = 5,081). |
 | `eat_index` (+ `_pi80_*`, `_pi95_*`) | Estimated **CT EAT volume / total heart volume**, with 80% / 95% prediction intervals. |
 | `eat_volume_ml` (+ PIs) | Estimated **CT EAT volume in mL**. |
-| `p_high_eat` | Observed rate of high EAT (indexed EAT ≥ 95th age-sex percentile) among reference patients with a similar score. |
+| `p_high_eat` | Rate of high EAT among reference patients with a similar score (all ages and sexes pooled). |
+| `age_sex_group`, `high_eat_threshold` | Age group (<50, 50–64, ≥65 y) × sex, and that group's high-EAT cutoff (95th percentile of EAT / heart volume). |
+| `p_high_eat_age_sex` | **Age- and sex-specific probability of high EAT**, from the nomogram. |
+| `score_percentile_age_sex` | Percentile of the score among reference patients of the same age group and sex. |
 | `clip_predictions.csv` | Score for every clip, if you want to filter by view yourself. |
 
 ### How EAT is estimated
@@ -92,6 +101,16 @@ No patient-level data is included. These are **population-level estimates for re
 substitute for CT, and they were derived in one health system on a mostly Philips fleet.
 
 <br clear="right">
+
+### Age- and sex-specific nomogram
+
+<p align="center"><img src="docs/figures/nomogram.png" width="760"></p>
+
+Following the paper, **high EAT** is CT EAT volume / total heart volume at or above the 95th percentile for
+the patient's age group (<50, 50–64, ≥65 years) and sex. For each of the six groups, a logistic model of
+log10(PanAdipo score) gives the probability of high EAT. PanAdipo discriminated high EAT with an AUROC of
+0.91–0.95 across the groups. The same score means more for a younger patient: the reference distribution and
+the high-EAT cutoff both shift with age.
 
 ---
 
@@ -123,43 +142,17 @@ python gradcam_panadipo.py --fpaths work/videos/STUDY001_12.avi --out_dir gradca
 ```
 
 <p align="center"><img src="docs/figures/fig2a_echo_ct.jpg" width="820"><br>
-<sub>Grad-CAM++ attention over the epicardium (left) and the paired CCTA BOA segmentation used as the reference standard (right).</sub></p>
+<sub>Grad-CAM++ attention over the epicardium (left) and the paired CCTA reference standard (right): BOA segmentation of epicardial and paracardial fat and of the cardiac structures summed as heart volume.</sub></p>
 
 **Preprocessing** is a local-file port of the PanEcho pipeline. A motion mask built from frame-to-frame
 changes keeps only the ultrasound sector and drops burned-in text, ECG traces, and calipers. Frames are cropped
 to the mask, resized to 224 px with `INTER_AREA`, and zero-padded to 256 × 256. Clips are named
-`<study_id>_<dicom_stem>.avi`.
+`<study_id>_<dicom_stem>.avi`. It needs **pydicom ≥ 3**, which converts YBR-encoded JPEG frames to RGB.
 
 **Inference** samples 16 evenly spaced frames, resizes them to 224 × 224 with `INTER_AREA`, and applies
 ImageNet normalisation, exactly as in the manuscript evaluation. The **Grad-CAM++** script uses the per-frame
 ConvNeXt encoder (penultimate stage) with unsharp-mask sharpening and a 0.25 threshold. It writes a
 cardiac-cycle panel PNG plus overlay and side-by-side MP4s.
-
----
-
-## Reproducibility
-
-Before release, the code was checked against the stored manuscript predictions (summary below; the internal reference data are not distributed).
-
-| Check | Data | Result |
-|---|---|---|
-| Clip scores from preprocessed AVIs | 1,000 random YNHHS TTE test clips | **bit-exact**, max \|Δ\| = 3×10⁻⁸ |
-| Clip scores from preprocessed AVIs | 1,000 random clips from the 5,081 CT-paired studies | **bit-exact**, max \|Δ\| = 6×10⁻⁸ |
-| Same, in a fresh env built from `envs/panadipo.yml` | 300 CT-paired clips | **bit-exact** |
-| Same, in the original training env (`panecho`) | 2 × 1,000 clips | **bit-exact** |
-| End to end from raw DICOM (`run_pipeline.py`) | 8 random CT-paired studies, 517 clips | clip counts 8/8 identical; study score \|Δ\| ≤ 0.003 (median 0.0014) |
-| EAT calibration (manuscript Fig. 3A) | 5,081 held-out CT pairs | ρ = 0.76, R² = 0.53, AUROC (high EAT) = 0.90, matching the manuscript |
-
-<details>
-<summary>Notes</summary>
-
-- The previous version of this repository resized 256 px clips with `INTER_LINEAR` rather than `INTER_AREA`. That
-  shifted clip scores by a median of 6% (max |Δ| 0.078). It is fixed here.
-- DICOM decoding needs **pydicom ≥ 3**, which converts YBR_FULL_422 JPEG to RGB, as in the original preprocessing.
-  pydicom 2.x with pylibjpeg returns raw YBR and gives wrong colours (mean pixel error ≈ 26 / 255).
-- The small end-to-end differences come from JPEG decoder implementations. The motion-mask threshold can
-  occasionally move the crop box by one pixel. Both effects are tiny at the study level.
-</details>
 
 ---
 
@@ -196,9 +189,9 @@ panadipo/
   model.py               PanEcho backbone + head, checkpoint loading
   video.py               clip loading (identical to the manuscript evaluation)
   dicom.py               motion-mask crop / resize / AVI writing
-  eat.py                 CT-calibrated EAT estimates
+  eat.py                 CT-calibrated EAT estimates + age-sex nomogram
   report.py              per-study PNG report
-assets/eat_calibration.json   formula coefficients + aggregate reference quantiles
+assets/eat_calibration.json   formula coefficients, nomogram coefficients, aggregate reference quantiles
 envs/panadipo.yml        single environment for everything
 docs/figures/            README figures (from the manuscript)
 ```
@@ -235,7 +228,7 @@ If you use PanAdipo, please cite:
 > \*Corresponding author: Evangelos K. Oikonomou, MD, DPhil (evangelos.oikonomou@yale.edu)
 
 PanAdipo is built on the [PanEcho](https://github.com/CarDS-Yale/PanEcho) echocardiography foundation model:
-Holste G, *et al.* Complete AI-enabled echocardiography interpretation with multitask deep learning. *JAMA* 2025.
+PMID: 40549400.
 
 ## Contact
 

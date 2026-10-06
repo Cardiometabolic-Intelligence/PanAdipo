@@ -143,3 +143,31 @@ def find_dicoms(root):
             except OSError:
                 pass
     return out
+
+
+def read_demographics(dicom_paths, max_tries: int = 5) -> dict:
+    """Age (years) and sex from the first readable DICOM header of a study (pixel data not read).
+
+    Uses PatientAge (e.g. '063Y'), else StudyDate - PatientBirthDate; PatientSex 'M'/'F'.
+    Returns {'age': float or None, 'sex': 'male'/'female' or None}.
+    """
+    for p in list(dicom_paths)[:max_tries]:
+        try:
+            ds = pydicom.dcmread(str(p), stop_before_pixels=True, force=True)
+        except Exception:
+            continue
+        age = None
+        pa = str(getattr(ds, "PatientAge", "") or "").strip().upper()
+        if len(pa) >= 2 and pa[:-1].isdigit():
+            age = float(pa[:-1]) * {"Y": 1, "M": 1 / 12, "W": 1 / 52, "D": 1 / 365.25}.get(pa[-1], np.nan)
+        if age is None or not np.isfinite(age):
+            bd, sd = str(getattr(ds, "PatientBirthDate", "") or ""), str(getattr(ds, "StudyDate", "") or "")
+            try:
+                from datetime import datetime
+                age = (datetime.strptime(sd[:8], "%Y%m%d") - datetime.strptime(bd[:8], "%Y%m%d")).days / 365.25
+            except ValueError:
+                age = None
+        sex = {"M": "male", "F": "female"}.get(str(getattr(ds, "PatientSex", "") or "").strip().upper())
+        if age is not None or sex is not None:
+            return {"age": age, "sex": sex}
+    return {"age": None, "sex": None}

@@ -6,17 +6,22 @@ PanAdipo end-to-end: echo DICOM study -> PanAdipo score -> estimated EAT volume 
       └─ 2. infer       : PanAdipo probability per clip (16 frames, 224x224) (infer.py)
       └─ 3. aggregate   : study score = mean over all clips
       └─ 4. EAT         : CT-calibrated EAT volume (mL) and EAT / heart volume, with 80/95% PIs
+                          + age-sex nomogram (age / sex from the DICOM header, or --age/--sex)
       └─ 5. report      : reports/<study_id>.png
 
 Usage:
     python run_pipeline.py --study_dir /data/STUDY001 --out_dir results/
     python run_pipeline.py --studies_root /data/echo_dicoms --out_dir results/ --n_workers 16
+    python run_pipeline.py --study_dir /data/STUDY001 --out_dir results/ --age 58 --sex F
 """
 
 import argparse
 from pathlib import Path
 
-from infer import print_studies, run_inference
+import pandas as pd
+
+from infer import add_demographic_args, print_studies, run_inference
+from panadipo.dicom import read_demographics
 from panadipo.eat import EATCalibration
 from panadipo.model import DEFAULT_CKPT
 from panadipo.report import study_report
@@ -32,6 +37,9 @@ def main():
     p.add_argument("--device", default=None)
     p.add_argument("--batch_size", type=int, default=32)
     p.add_argument("--no_report", action="store_true")
+    add_demographic_args(p)
+    p.add_argument("--no_dicom_demographics", action="store_true",
+                   help="do not read age / sex from the DICOM header")
     args = p.parse_args()
     out = Path(args.out_dir)
 
@@ -43,9 +51,19 @@ def main():
     if videos.empty:
         raise SystemExit("No cine clips could be extracted (only stills / unreadable DICOMs).")
 
+    dem = None
+    if args.demographics:
+        dem = pd.read_csv(args.demographics)
+    elif not args.no_dicom_demographics:
+        dem = pd.DataFrame([{"study_id": sid, **read_demographics(g.dicom_path)}
+                            for sid, g in jobs.groupby("study_id")])
+        print(f"  age / sex from DICOM header: {int(dem[['age', 'sex']].notna().all(axis=1).sum())}"
+              f"/{len(dem)} studies")
+
     print("── 2/3  PanAdipo inference")
     _, studies = run_inference(videos, out, args.checkpoint, args.device, args.batch_size,
-                               num_workers=min(args.n_workers, 8))
+                               num_workers=min(args.n_workers, 8), demographics=dem,
+                               age=args.age, sex=args.sex)
 
     print("── 3/3  Reports")
     if not args.no_report:

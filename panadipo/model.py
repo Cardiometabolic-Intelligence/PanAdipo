@@ -64,7 +64,14 @@ def load_model(checkpoint=DEFAULT_CKPT, device="cpu"):
             f"Checkpoint not found: {checkpoint}\n"
             "Download best_model.pt into weights/ (see README) or pass --checkpoint."
         )
-    ckpt  = torch.load(checkpoint, map_location=device, weights_only=True)   # tensors + config only
+    try:
+        ckpt = torch.load(checkpoint, map_location=device, weights_only=True)   # tensors + config only
+    except Exception as e:
+        raise RuntimeError(
+            f"Could not load {checkpoint} with the safe weights-only loader. This usually means it is a full "
+            "training checkpoint rather than the released weights. Download the v1.0 release with "
+            "./copy_weights.sh (MD5 " + CKPT_MD5 + ")."
+        ) from e
     state = ckpt["model_state"]
     cfg   = ckpt.get("args", {}) or {}
 
