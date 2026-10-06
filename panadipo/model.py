@@ -22,8 +22,8 @@ LABEL_NAME       = "prominent_epicardial_fat_depot"
 DEFAULT_CLIP_LEN = 16
 DEFAULT_CKPT     = Path(__file__).resolve().parent.parent / "weights" / "best_model.pt"
 
-# MD5 of the released checkpoint (panadipo_20260401_215632/best_model.pt)
-CKPT_MD5 = "1437996a9ef5ac70f89879ba5e586702"
+# MD5 of the released weights-only checkpoint (v1.0 release asset best_model.pt)
+CKPT_MD5 = "1aa0ce1989506553dca91f3982a199cf"
 
 
 class PanEchoClassifier(nn.Module):
@@ -56,7 +56,7 @@ class PanEchoClassifier(nn.Module):
 def load_model(checkpoint=DEFAULT_CKPT, device="cpu"):
     """Load a PanAdipo checkpoint (head type and clip_len auto-detected).
 
-    Returns (model.eval(), meta) where meta holds clip_len / head / val_auroc / epoch.
+    Returns (model.eval(), meta) where meta holds clip_len / head.
     """
     checkpoint = Path(checkpoint)
     if not checkpoint.exists():
@@ -64,7 +64,7 @@ def load_model(checkpoint=DEFAULT_CKPT, device="cpu"):
             f"Checkpoint not found: {checkpoint}\n"
             "Download best_model.pt into weights/ (see README) or pass --checkpoint."
         )
-    ckpt  = torch.load(checkpoint, map_location=device, weights_only=False)
+    ckpt  = torch.load(checkpoint, map_location=device, weights_only=True)   # tensors + config only
     state = ckpt["model_state"]
     cfg   = ckpt.get("args", {}) or {}
 
@@ -79,7 +79,5 @@ def load_model(checkpoint=DEFAULT_CKPT, device="cpu"):
     meta = {
         "clip_len":  clip_len,
         "head":      "simple" if simple_head else "4-layer",
-        "val_auroc": ckpt.get("val_auroc"),
-        "epoch":     ckpt.get("epoch"),
     }
     return model, meta

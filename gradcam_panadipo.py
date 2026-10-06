@@ -247,7 +247,7 @@ def main():
     print(f"Checkpoint : {args.checkpoint}")
     model, meta = load_model(args.checkpoint, device)
     clip_len = meta["clip_len"]
-    print(f"  head={meta['head']}  clip_len={clip_len}  val_auroc={meta['val_auroc']}")
+    print(f"  head={meta['head']}  clip_len={clip_len}")
 
     # Locate the ConvNeXt image encoder inside the PanEcho backbone
     image_encoder = None

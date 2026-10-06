@@ -63,11 +63,13 @@ echo "Done ($(du -h "$DEST" | cut -f1))."
 
 python - "$DEST" <<'PY'
 import sys, torch
-ck = torch.load(sys.argv[1], map_location="cpu", weights_only=False)
+ck = torch.load(sys.argv[1], map_location="cpu", weights_only=True)
 keys = list(ck.get("model_state", {}).keys())
 print(f"  model_state tensors : {len(keys)}")
 print(f"  head type           : {'4-layer' if 'head.4.weight' in keys else 'simple'}")
 print(f"  clip_len            : {(ck.get('args') or {}).get('clip_len', 16)}")
-print(f"  val_auroc           : {ck.get('val_auroc')}")
-print(f"  epoch               : {ck.get('epoch')}")
+import hashlib
+md5 = hashlib.md5(open(sys.argv[1], "rb").read()).hexdigest()
+ok = md5 == "1aa0ce1989506553dca91f3982a199cf"
+print(f"  md5                 : {md5}  ({'OK' if ok else 'MISMATCH - re-download'})")
 PY

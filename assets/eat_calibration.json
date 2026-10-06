@@ -3,7 +3,7 @@
  "cohort": "YNHHS-ORFAN echo-CCTA pairs within 365 days, one pair per patient, held out from PanAdipo development (BOA segmentation)",
  "n_patients": 5081,
  "fitted": "2026-10-03",
- "checkpoint": "panadipo_20260401_215632/best_model.pt (md5 1437996a9ef5ac70f89879ba5e586702)",
+ "checkpoint": "PanAdipo v1.0 weights (release asset best_model.pt, md5 1aa0ce1989506553dca91f3982a199cf)",
  "targets": {
   "eat_index": "EAT volume / total heart volume (LV myocardium + LV + RV + LA + RA)",
   "eat_volume_ml": "BOA epicardial adipose tissue volume, mL (-190 to -30 HU within pericardium)"

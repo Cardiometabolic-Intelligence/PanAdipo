@@ -167,9 +167,9 @@ Before release, the code was checked against the stored manuscript predictions (
 
 | | |
 |---|---|
-| File | `weights/best_model.pt` (≈ 500 MB, full backbone + head state) |
-| Run | `panadipo_20260401_215632` |
-| MD5 | `1437996a9ef5ac70f89879ba5e586702` |
+| File | `weights/best_model.pt` (≈ 170 MB; model weights only, no optimizer state or training logs) |
+| Version | v1.0 (manuscript model) |
+| MD5 | `1aa0ce1989506553dca91f3982a199cf` |
 | Architecture | PanEcho backbone (ConvNeXt-T per frame → 4-layer temporal Transformer → 768-d) + Dropout(0.3) → Linear |
 | Input | 16 frames × 224 × 224 RGB, ImageNet normalisation |
 
@@ -178,10 +178,10 @@ Weights are not stored in git. They are published as a release asset (`v1.0`), a
 ```bash
 ./copy_weights.sh                          # download from the release (uses gh, or GH_TOKEN for a private repo)
 ./copy_weights.sh /path/to/best_model.pt   # or copy a local file
-md5sum weights/best_model.pt               # expect 1437996a9ef5ac70f89879ba5e586702
+md5sum weights/best_model.pt               # expect 1aa0ce1989506553dca91f3982a199cf
 ```
 
-The script also prints a sanity check (head type, clip_len, val AUROC, epoch). On first run, `torch.hub` downloads the PanEcho architecture
+The script also prints a sanity check (head type, clip_len, MD5). On first run, `torch.hub` downloads the PanEcho architecture
 code (not its weights) from GitHub. That step needs internet once and is then cached in `~/.cache/torch/hub`.
 
 ## Repository layout
