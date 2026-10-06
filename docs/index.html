@@ -33,6 +33,7 @@
     --code-bg: #262624;
   }
   * { box-sizing: border-box; }
+  main a { color: var(--series-1); }
   body { margin: 0; }
   .viz-root { background: var(--surface-0); color: var(--text-primary); min-height: 100vh;
     font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -125,7 +126,7 @@
   <b>PanAdipo</b>
   <nav>
     <a href="#how">How it works</a><a href="#calculator">Nomogram calculator</a>
-    <a href="#tracker">Track results</a><a href="#run">Run it</a><a href="#cite">Cite</a>
+    <a href="#tracker">Track results</a><a href="#run">Running it</a><a href="#cite">Cite</a>
   </nav>
   <button id="theme" aria-label="Toggle light / dark theme">◐ Theme</button>
 </div></header>
@@ -225,15 +226,10 @@
   </section>
 
   <section id="run">
-    <h2>Run it on your studies</h2>
-    <p class="intro">Inference needs Python and (ideally) a GPU, so it runs locally. Either the command line or the
-      local app (<code>python app.py</code>, a browser interface on your own machine) gives the same results.</p>
-    <pre><code>git clone https://github.com/Cardiometabolic-Intelligence/PanAdipo.git &amp;&amp; cd PanAdipo
-conda env create -f envs/panadipo.yml &amp;&amp; conda activate panadipo
-./copy_weights.sh                                   # model weights (v1.0 release)
-
-python run_pipeline.py --studies_root /path/to/echo_dicoms --out_dir results/
-python app.py                                       # or: interactive local app at http://127.0.0.1:7860</code></pre>
+    <h2>Running PanAdipo</h2>
+    <p class="intro">The model runs locally on your own computer (ideally with a GPU), so images never leave your
+      institution. It produces the <code>study_predictions.csv</code> used by the tracker above. For access to the
+      pipeline and model weights, contact <a href="mailto:evangelos.oikonomou@yale.edu">evangelos.oikonomou@yale.edu</a>.</p>
   </section>
 
   <section id="cite">
@@ -583,7 +579,7 @@ fetch("calibration.json").then(r => r.json()).then(j => {
     if (q.get("demo")) ingest(demoRecords());
     if (q.get("theme")) document.documentElement.dataset.theme = q.get("theme"), renderCalc(), STUDIES.length && renderTracker();
   })
-  .catch(() => { document.getElementById("kpis").innerHTML = '<p class="hint">Could not load calibration.json — serve this page over http (e.g. GitHub Pages or <code>python -m http.server</code> in docs/).</p>'; });
+  .catch(() => { document.getElementById("kpis").innerHTML = '<p class="hint">Could not load calibration.json — please open this page from its web address.</p>'; });
 </script>
 </body>
 </html>
